@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Matching Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+        }
+        .card {
+            width: 150px;
+            height: 150px;
+            background-color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.3s;
+        }
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+        }
+        .card-front {
+            transform: rotateY(180deg);
+        }
+        .card-back {
+            background-color: #ffcb05;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-back::after {
+            content: "⚡";
+            font-size: 50px;
+        }
+        #game-info {
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #2ecc71;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+        }
+        button:hover {
+            background-color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Pokémon Matching Game</h1>
+        <div id="game-info">
+            Score: <span id="score">0</span> | Time: <span id="timer">0</span>s
+        </div>
+        <div id="game-board"></div>
+        <button onclick="resetGame()">Reset Game</button>
+    </div>
+
+    <script>
+        const pokemonPairs = [
+            { id: 1, name: 'Pikachu', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png' },
+            { id: 2, name: 'Charmander', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png' },
+            { id: 3, name: 'Bulbasaur', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png' },
+            { id: 4, name: 'Squirtle', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png' },
+            { id: 5, name: 'Eevee', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png' },
+            { id: 6, name: 'Jigglypuff', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/39.png' },
+            { id: 7, name: 'Gengar', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png' },
+            { id: 8, name: 'Snorlax', image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png' }
+        ];
+
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let score = 0;
+        let timer = 0;
+        let timerInterval;
+
+        function createGameBoard() {
+            const gameBoard = document.getElementById('game-board');
+            gameBoard.innerHTML = '';
+            
+            // Create array with pairs
+            cards = [...pokemonPairs, ...pokemonPairs]
+                .sort(() => Math.random() - 0.5)
+                .map((pokemon, index) => ({ ...pokemon, uniqueId: index }));
+
+            cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card');
+                cardElement.dataset.id = card.id;
+                cardElement.dataset.uniqueId = card.uniqueId;
+
+                const front = document.createElement('div');
+                front.classList.add('card-front');
+                front.innerHTML = `<img src="${card.image}" alt="${card.name}" style="width: 100%; height: 100%; object-fit: contain;">`;
+
+                const back = document.createElement('div');
+                back.classList.add('card-back');
+
+                cardElement.appendChild(front);
+                cardElement.appendChild(back);
+                cardElement.addEventListener('click', flipCard);
+                gameBoard.appendChild(cardElement);
+            });
+
+            startTimer();
+        }
+
+        function flipCard() {
+            if (flippedCards.length >= 2 || this.classList.contains('flipped')) return;
+
+            this.classList.add('flipped');
+            flippedCards.push(this);
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            if (card1.dataset.id === card2.dataset.id && card1.dataset.uniqueId !== card2.dataset.uniqueId) {
+                matchedPairs++;
+                score += 10;
+                updateScore();
+                flippedCards = [];
+                
+                if (matchedPairs === pokemonPairs.length) {
+                    clearInterval(timerInterval);
+                    setTimeout(() => alert(`Congratulations! Final Score: ${score} in ${timer} seconds!`), 500);
+                }
+            } else {
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                    score = Math.max(0, score - 2); // Penalty for mismatch
+                    updateScore();
+                }, 1000);
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timer = 0;
+            document.getElementById('timer').textContent = timer;
+            timerInterval = setInterval(() => {
+                timer++;
+                document.getElementById('timer').textContent = timer;
+            }, 1000);
+        }
+
+        function resetGame() {
+            matchedPairs = 0;
+            score = 0;
+            flippedCards = [];
+            updateScore();
+            createGameBoard();
+        }
+
+        // Initialize game
+        createGameBoard();
+    </script>
+</body>
+</html>
